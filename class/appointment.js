@@ -1,3 +1,5 @@
+const times = require('../helpers/times');
+
 class Appointment {
     constructor(axios, baseUrl) {
         // TODO não consegui colocar baseURL no axios
@@ -7,11 +9,12 @@ class Appointment {
         this.axios = axios;
     }
 
-    
+    // criei os horarios que podem ser reservados, agora pegar os horarios que temos ocupados e comparar
     async getAvailableAppointments(req, res) {
-        const WorkTime = await this.employessWorkInterval();
-        const appointments = await this.appointmentsByEmployer(2);
-        res.json(appointments);
+        const appointments = await this.appointmentsAlreadyScheduled();
+        const interval = await times.onlyAvailableAppointments(appointments);
+
+        res.json(interval);
     }
 
     async employessWorkInterval() {
@@ -36,6 +39,23 @@ class Appointment {
             });
         
         return response;
+    }
+
+    async appointmentsAlreadyScheduled() {
+        const { employees } = await this.employessWorkInterval();
+        const allAppointments = [];
+
+        for (const { id } of employees) {
+            const { appointments } = await this.appointmentsByEmployer(id);
+            appointments.forEach((appointment) => {
+                allAppointments.push({
+                    startsAt: appointment.startsAt,
+                    finishesAt: appointment.finishesAt,
+                });
+            });
+        }
+
+        return allAppointments;
     }
 };
 
