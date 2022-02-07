@@ -23,7 +23,7 @@ Projeto que consulta horários livres de uma petShop, verificando pela carga hor
     ```bash
     npm start / npm run dev
     ```
-  - Access the url
+- Access the url
  
   ```bash
     /horarios-livres
