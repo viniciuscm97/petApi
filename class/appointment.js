@@ -2,19 +2,18 @@ const times = require('../helpers/times');
 
 class Appointment {
     constructor(axios, baseUrl) {
-        // TODO não consegui colocar baseURL no axios
         this.axiosConfig = {
             baseUrl
         };
         this.axios = axios;
     }
 
-    // criei os horarios que podem ser reservados, agora pegar os horarios que temos ocupados e comparar
     async getAvailableAppointments(req, res) {
         const appointments = await this.appointmentsAlreadyScheduled();
-        const interval = await times.onlyAvailableAppointments(appointments);
-
-        res.json(interval);
+        const availableAppointments = {
+            availableTimes : appointments
+        };
+        res.send(availableAppointments);
     }
 
     async employessWorkInterval() {
@@ -43,19 +42,31 @@ class Appointment {
 
     async appointmentsAlreadyScheduled() {
         const { employees } = await this.employessWorkInterval();
-        const allAppointments = [];
 
-        for (const { id } of employees) {
+        const availableAppointments = [];
+
+        for (const { id, startsAt, finishesAt } of employees) {
             const { appointments } = await this.appointmentsByEmployer(id);
-            appointments.forEach((appointment) => {
-                allAppointments.push({
+            const allAppointments = appointments.map(appointment => {
+                return {
                     startsAt: appointment.startsAt,
                     finishesAt: appointment.finishesAt,
-                });
+                };
             });
+            availableAppointments.push(await times.availableAppointmentsByEmployer(allAppointments, { startsAt, finishesAt }));
         }
+        
+        let allAppointments = []
+            .concat(...availableAppointments)
+            .sort()
+            .reduce((acc, curr) => (acc[curr] = '', acc), {});
 
-        return allAppointments;
+        let parteToHourAndMinute = Object.keys(allAppointments)
+            .map(item => {
+                return new Date(item).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            });
+        
+        return parteToHourAndMinute;
     }
 };
 

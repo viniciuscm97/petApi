@@ -1,12 +1,13 @@
-const WORK_INTERVAL = {
-    START: 8,
-    END: 18,
-};
-
-const intervalsToAppointment = async () => {
-    const finalIntervalAvailable = createDate(WORK_INTERVAL.END);
+const availableAppointmentsByEmployer = async (appointments, workingDay) => {
+    const { startsAt, finishesAt } = workingDay;
+    const startTime = startsAt.split(':');
+    const finalTime = finishesAt.split(':');
+ 
+    const appointmentsDate = toDate(appointments);
+    const finalIntervalAvailable = createDate(...finalTime);
     const intervals = [];
-    intervals.push(createDate(WORK_INTERVAL.START));
+    
+    intervals.push(createDate(...startTime));
 
     do {
         const lastInterval = intervals[intervals.length - 1];
@@ -15,40 +16,43 @@ const intervalsToAppointment = async () => {
             lastInterval.getMinutes() === 0 ? 
             createDate(lastInterval.getHours(), 30) :
             createDate(lastInterval.getHours() + 1);
-
+        
         intervals.push(moreThirtyMinutes);
+
     } while (finalIntervalAvailable.getHours() !== intervals[intervals.length - 1].getHours());
 
+    const availableAppointments = intervals.filter((interval) => {
+        const alreadySchedule = appointmentsDate.find(appointment => {
+            return ((interval.getHours() >= appointment.start.getHours() && interval.getMinutes() >= appointment.start.getMinutes())
+                && (interval.getHours() < appointment.end.getHours() && interval.getMinutes() < appointment.end.getMinutes()))
+                || (interval > appointment.start && interval < appointment.end);
+        });
+        
+        return !alreadySchedule;
+    });
 
-    return intervals;
-};
-
-const onlyAvailableAppointments = async (appointments) => {
-    const scheduleAppointments = await toDate(appointments);
-    const intervals = intervalsToAppointment();
-
-    return scheduleAppointments;
+    return availableAppointments;
 };
 
 const createDate = (hour, minute = 0) => {
     const date = new Date();
     date.setHours(hour);
     date.setMinutes(minute);
+    date.setSeconds(0);
     return date;
 };
 
 const toDate = (appointments) => {
-    return appointments.map((data) => {
-        const [startHour,startMinute] = data.startsAt.split(':');
-        const [endHour,endMinute] = data.finishesAt.split(':');
+    return appointments.map(data => {
+        const start = data.startsAt.split(':');
+        const end = data.finishesAt.split(':');
         return {
-            start: createDate(startHour,startMinute),
-            end: createDate(endHour,endMinute),
+            start: createDate(...start),
+            end: createDate(...end),
         }
     });
 };
 
 module.exports = {
-    intervalsToAppointment,
-    onlyAvailableAppointments,
+    availableAppointmentsByEmployer,
 };
